@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { UserRole } from '../models/User';
 
 const JWT_SECRET: string = process.env.JWT_SECRET ?? 'your-secret-key-change-in-production';
@@ -10,10 +10,12 @@ export interface JWTPayload {
   role: UserRole;
 }
 
-export const generateToken = (payload: JWTPayload): string =>
-  jwt.sign(payload as string | object | Buffer, JWT_SECRET, {
+export const generateToken = (payload: JWTPayload): string => {
+  const options: SignOptions = {
     expiresIn: JWT_EXPIRES_IN,
-  });
+  };
+  return jwt.sign(payload, JWT_SECRET, options);
+};
 
 export const verifyToken = (token: string): JWTPayload => {
   try {
