@@ -61,15 +61,8 @@ export const createApproval = async (
     });
 
     // Fetch with requester information
-    const changeRequestWithDetails = await db.ChangeRequest.findByPk(changeRequest.id, {
-      include: [
-        {
-          model: db.User,
-          as: 'requester',
-          attributes: ['id', 'name', 'email'],
-        },
-      ],
-    });
+    const changeRequestWithDetails = await db.ChangeRequest.findByPk(changeRequest.id);
+    const requester = changeRequestWithDetails ? await changeRequestWithDetails.getRequester() : null;
 
     res.status(201).json({
       status: 'success',
@@ -81,11 +74,11 @@ export const createApproval = async (
           entityId: changeRequestWithDetails?.entityId,
           reason: changeRequestWithDetails?.reason,
           status: changeRequestWithDetails?.status,
-          requestedBy: changeRequestWithDetails?.requester
+          requestedBy: requester
             ? {
-                id: changeRequestWithDetails.requester.id,
-                name: changeRequestWithDetails.requester.name,
-                email: changeRequestWithDetails.requester.email,
+                id: requester.id,
+                name: requester.name,
+                email: requester.email,
               }
             : null,
           createdAt: changeRequestWithDetails?.createdAt,
@@ -144,15 +137,7 @@ export const respondToApproval = async (
     }
 
     // Find change request
-    const changeRequest = await db.ChangeRequest.findByPk(changeRequestId, {
-      include: [
-        {
-          model: db.User,
-          as: 'requester',
-          attributes: ['id', 'name', 'email'],
-        },
-      ],
-    });
+    const changeRequest = await db.ChangeRequest.findByPk(changeRequestId);
 
     if (!changeRequest) {
       res.status(404).json({
@@ -171,27 +156,16 @@ export const respondToApproval = async (
       return;
     }
 
-    // Update change request
-    changeRequest.status = approve ? ChangeRequestStatus.APPROVED : ChangeRequestStatus.REJECTED;
-    changeRequest.approverId = req.user.userId;
-    changeRequest.updatedAt = new Date(); // Response timestamp
-    await changeRequest.save();
+    // Update change request (let Sequelize handle timestamp)
+    await changeRequest.update({
+      status: approve ? ChangeRequestStatus.APPROVED : ChangeRequestStatus.REJECTED,
+      approverId: req.user.userId,
+    });
 
     // Fetch with approver information
-    const updatedChangeRequest = await db.ChangeRequest.findByPk(changeRequest.id, {
-      include: [
-        {
-          model: db.User,
-          as: 'requester',
-          attributes: ['id', 'name', 'email'],
-        },
-        {
-          model: db.User,
-          as: 'approver',
-          attributes: ['id', 'name', 'email'],
-        },
-      ],
-    });
+    const updatedChangeRequest = await db.ChangeRequest.findByPk(changeRequest.id);
+    const updatedRequester = updatedChangeRequest ? await updatedChangeRequest.getRequester() : null;
+    const updatedApprover = updatedChangeRequest ? await updatedChangeRequest.getApprover() : null;
 
     res.status(200).json({
       status: 'success',
@@ -203,22 +177,22 @@ export const respondToApproval = async (
           entityId: updatedChangeRequest?.entityId,
           reason: updatedChangeRequest?.reason,
           status: updatedChangeRequest?.status,
-          requestedBy: updatedChangeRequest?.requester
+          requestedBy: updatedRequester
             ? {
-                id: updatedChangeRequest.requester.id,
-                name: updatedChangeRequest.requester.name,
-                email: updatedChangeRequest.requester.email,
+                id: updatedRequester.id,
+                name: updatedRequester.name,
+                email: updatedRequester.email,
               }
             : null,
-          approver: updatedChangeRequest?.approver
+          approver: updatedApprover
             ? {
-                id: updatedChangeRequest.approver.id,
-                name: updatedChangeRequest.approver.name,
-                email: updatedChangeRequest.approver.email,
+                id: updatedApprover.id,
+                name: updatedApprover.name,
+                email: updatedApprover.email,
               }
             : null,
           createdAt: updatedChangeRequest?.createdAt,
-          updatedAt: updatedChangeRequest?.updatedAt, // Response timestamp
+          updatedAt: updatedChangeRequest?.updatedAt,
         },
       },
     });

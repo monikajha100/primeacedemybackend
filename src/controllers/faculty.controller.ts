@@ -66,16 +66,9 @@ export const createFaculty = async (req: AuthRequest & { body: CreateFacultyBody
       availability: availability || null,
     });
 
-    // Fetch the created profile with user information
-    const profileWithUser = await db.FacultyProfile.findByPk(facultyProfile.id, {
-      include: [
-        {
-          model: db.User,
-          as: 'user',
-          attributes: ['id', 'name', 'email', 'phone', 'role', 'isActive'],
-        },
-      ],
-    });
+    // Fetch the created profile and then load associated user via getter
+    const profileWithUser = await db.FacultyProfile.findByPk(facultyProfile.id);
+    const associatedUser = profileWithUser ? await profileWithUser.getUser() : null;
 
     res.status(201).json({
       status: 'success',
@@ -86,7 +79,16 @@ export const createFaculty = async (req: AuthRequest & { body: CreateFacultyBody
           userId: profileWithUser?.userId,
           expertise: profileWithUser?.expertise,
           availability: profileWithUser?.availability,
-          user: profileWithUser?.user,
+          user: associatedUser
+            ? {
+                id: associatedUser.id,
+                name: associatedUser.name,
+                email: associatedUser.email,
+                phone: associatedUser.phone,
+                role: associatedUser.role,
+                isActive: associatedUser.isActive,
+              }
+            : null,
           createdAt: profileWithUser?.createdAt,
           updatedAt: profileWithUser?.updatedAt,
         },

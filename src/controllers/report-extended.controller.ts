@@ -23,7 +23,6 @@ export const getStudentCurrentBatch = async (req: AuthRequest & { params: { stud
     }
 
     const student = await db.User.findByPk(studentId, {
-      where: { role: UserRole.STUDENT },
       include: [
         {
           model: db.Enrollment,
@@ -45,7 +44,7 @@ export const getStudentCurrentBatch = async (req: AuthRequest & { params: { stud
       ],
     });
 
-    if (!student) {
+    if (!student || student.role !== UserRole.STUDENT) {
       res.status(404).json({
         status: 'error',
         message: 'Student not found',
@@ -116,11 +115,10 @@ export const getStudentAttendance = async (
     const { from, to } = req.query;
 
     const student = await db.User.findByPk(studentId, {
-      where: { role: UserRole.STUDENT },
-      attributes: ['id', 'name', 'email'],
+      attributes: ['id', 'name', 'email', 'role'],
     });
 
-    if (!student) {
+    if (!student || student.role !== UserRole.STUDENT) {
       res.status(404).json({
         status: 'error',
         message: 'Student not found',

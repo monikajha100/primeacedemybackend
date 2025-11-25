@@ -1,7 +1,7 @@
-import jwt, { Secret } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { UserRole } from '../models/User';
 
-const JWT_SECRET = (process.env.JWT_SECRET ?? 'your-secret-key-change-in-production') as Secret;
+const JWT_SECRET: string = process.env.JWT_SECRET ?? 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN: string | number = process.env.JWT_EXPIRES_IN ?? '24h';
 
 export interface JWTPayload {
@@ -11,7 +11,7 @@ export interface JWTPayload {
 }
 
 export const generateToken = (payload: JWTPayload): string =>
-  jwt.sign(payload, JWT_SECRET, {
+  jwt.sign(payload as string | object | Buffer, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,
   });
 
